@@ -2,7 +2,7 @@
  * WeightTracker - Storage & Data Model Layer
  */
 
-const STORAGE_KEY = 'WT_WEIGHT_TRACKER_DATA_V1';
+const STORAGE_KEY = 'WT_WEIGHT_TRACKER_DATA_V2';
 
 const DEFAULT_USERS = {
   liugang: {
@@ -10,8 +10,8 @@ const DEFAULT_USERS = {
     name: '刘钢',
     role: '主基准战士',
     avatarBg: 'from-emerald-500 to-teal-700',
-    initialWeight: 88.0, // 默认占位，首次打卡可更新
-    targetWeight: 80.0,
+    initialWeight: 96.0,
+    targetWeight: 90.0,
     motto: '守住底线，早晚如实打卡，绝不放弃！',
     penalties: 0
   },
@@ -20,8 +20,8 @@ const DEFAULT_USERS = {
     name: '张庭磊',
     role: '铁三角核心',
     avatarBg: 'from-cyan-500 to-blue-700',
-    initialWeight: 85.0,
-    targetWeight: 78.0,
+    initialWeight: 90.0,
+    targetWeight: 86.0,
     motto: '严格自律，执行到底，相互督促！',
     penalties: 0
   },
@@ -30,8 +30,8 @@ const DEFAULT_USERS = {
     name: '卢轩',
     role: '铁三角先锋',
     avatarBg: 'from-amber-500 to-orange-700',
-    initialWeight: 82.0,
-    targetWeight: 75.0,
+    initialWeight: 94.0,
+    targetWeight: 90.0,
     motto: '兄弟同行，说到做到，共同达成！',
     penalties: 0
   }
