@@ -162,6 +162,15 @@ class MechanicalScaleRuler {
     this.updateDisplay();
   }
 
+  refreshLayout() {
+    if (!this.viewport || !this.track) return;
+    const steps = (this.value - this.min) / this.step;
+    const centerOffset = this.viewport.offsetWidth / 2;
+    this.currentTranslate = centerOffset - steps * this.tickWidth;
+    this.track.style.transition = 'none';
+    this.track.style.transform = `translateX(${this.currentTranslate}px)`;
+  }
+
   adjustValue(delta) {
     const target = +(this.value + delta).toFixed(1);
     this.setValue(target, true);

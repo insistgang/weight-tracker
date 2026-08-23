@@ -142,7 +142,9 @@ class TrackerCharts {
 
     const storage = window.trackerStorage;
     const allDates = storage.getAllDateStrings();
-    const today = new Date().toISOString().split('T')[0];
+    const today = typeof window.getLocalDateKey === 'function'
+      ? window.getLocalDateKey()
+      : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
 
     let html = `
       <div class="heatmap-grid">
@@ -163,7 +165,8 @@ class TrackerCharts {
         const rec = storage.getRecord(d, u.id);
         if (rec) {
           if (rec.morning && rec.evening) fullCount++;
-          if (rec.morning || rec.evening) checkinTotal++;
+          if (rec.morning) checkinTotal++;
+          if (rec.evening) checkinTotal++;
         }
       });
 

@@ -5,7 +5,9 @@
 class BattlePosterGenerator {
   static async generatePoster(selectedDate = null) {
     const storage = window.trackerStorage;
-    const dateStr = selectedDate || new Date().toISOString().split('T')[0];
+    const dateStr = selectedDate || (typeof window.getLocalDateKey === 'function'
+      ? window.getLocalDateKey()
+      : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`);
     const teamStats = storage.getTeamStats();
     const users = storage.getAllUsers();
 

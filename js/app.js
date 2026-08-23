@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentActiveUserId = 'liugang';
   let currentActiveSession = 'morning';
   let scaleRuler = null;
-  let selectedDate = new Date().toISOString().split('T')[0];
 
   // DOM Elements
   const teamTotalLostEl = document.getElementById('team-total-lost');
@@ -40,6 +39,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Toast
   const toastEl = document.getElementById('toast');
+  const syncStatusEl = document.getElementById('sync-status');
+
+  function localDateKey() {
+    return typeof window.getLocalDateKey === 'function'
+      ? window.getLocalDateKey()
+      : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+  }
+
+  function campaignDateKey(dateKey = localDateKey()) {
+    const startDate = storage.data.startDate || '2026-08-24';
+    const endDate = storage.data.endDate || '2026-09-30';
+    return dateKey < startDate ? startDate : dateKey > endDate ? endDate : dateKey;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[character]));
+  }
+
+  function safeAvatarBg(value, userId) {
+    const fallback = {
+      liugang: 'from-emerald-500 to-teal-700',
+      zhangtinglei: 'from-cyan-500 to-blue-700',
+      luxuan: 'from-amber-500 to-orange-700'
+    }[userId] || 'from-gray-500 to-gray-700';
+    const candidate = String(value || '');
+    return /^[a-z0-9-]+(?:\s+[a-z0-9-]+)*$/i.test(candidate) ? candidate : fallback;
+  }
+
+  function displayWeight(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toFixed(1) : '—';
+  }
+
+  function updateSyncStatus() {
+    if (!syncStatusEl || !storage.getSyncStatus) return;
+    const status = storage.getSyncStatus();
+    const labels = {
+      local: '本地缓存 · 等待云端',
+      syncing: '正在同步云端…',
+      synced: '云端已同步',
+      error: `云端同步失败 · ${status.lastError || '请检查网络'}`
+    };
+    syncStatusEl.textContent = labels[status.state] || labels.local;
+    syncStatusEl.className = `inline-flex mt-1 text-[10px] ${status.state === 'error' ? 'text-rose-400' : status.state === 'synced' ? 'text-emerald-400' : 'text-gray-500'}`;
+  }
 
   // --- Utility: Toast Notification ---
   function showToast(msg, duration = 2500) {
@@ -61,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Update Dashboard Stats ---
   function updateDashboard() {
+    updateSyncStatus();
     const teamStats = storage.getTeamStats();
     if (teamTotalLostEl) teamTotalLostEl.textContent = `-${teamStats.teamTotalLost.toFixed(1)}`;
     if (remainingDaysEl) remainingDaysEl.textContent = teamStats.remainingDays;
@@ -76,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderUserCards() {
     if (!userCardsContainer) return;
     const users = storage.getAllUsers();
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateKey();
 
     let html = '';
     users.forEach((u, i) => {
@@ -97,45 +148,56 @@ document.addEventListener('DOMContentLoaded', () => {
         statusText = '已完成一打卡';
       }
 
+      const userId = escapeHtml(u.id);
+      const userName = escapeHtml(u.name);
+      const role = escapeHtml(u.role);
+      const avatarBg = escapeHtml(safeAvatarBg(u.avatarBg, u.id));
+      const targetWeight = escapeHtml(displayWeight(stats.targetWeight));
+      const currentWeight = escapeHtml(displayWeight(stats.currentWeight));
+      const totalLost = escapeHtml(displayWeight(stats.totalLost));
+      const progressPct = escapeHtml(String(stats.progressPct));
+      const morningWeight = hasMorning ? escapeHtml(displayWeight(rec.morning.weight)) : '未上秤';
+      const eveningWeight = hasEvening ? escapeHtml(displayWeight(rec.evening.weight)) : '未上秤';
+
       html += `
         <div class="glass-card rounded-2xl p-4 md:p-5 relative overflow-hidden transition-all duration-300 hover:border-emerald-500/40">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 rounded-xl bg-gradient-to-br ${u.avatarBg} flex items-center justify-center font-extrabold text-white text-lg shadow-lg">
-                ${u.name.slice(0, 1)}
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br ${avatarBg} flex items-center justify-center font-extrabold text-white text-lg shadow-lg">
+                ${escapeHtml(String(u.name || '').slice(0, 1))}
               </div>
               <div>
                 <div class="flex items-center space-x-2">
-                  <h3 class="font-extrabold text-white text-base">${u.name}</h3>
-                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-gray-300 font-medium">${u.role}</span>
+                  <h3 class="font-extrabold text-white text-base">${userName}</h3>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-gray-300 font-medium">${role}</span>
                 </div>
                 <div class="flex items-center space-x-1.5 mt-0.5">
                   <span class="w-2 h-2 rounded-full ${statusDot}"></span>
-                  <span class="text-xs text-gray-400 font-medium">${statusText}</span>
+                  <span class="text-xs text-gray-400 font-medium">${escapeHtml(statusText)}</span>
                 </div>
               </div>
             </div>
             <div class="text-right">
               <span class="text-[10px] text-gray-400 uppercase font-semibold">累计消灭</span>
               <div class="text-xl font-extrabold text-emerald-400 font-mono-num">
-                -${stats.totalLost.toFixed(1)} <span class="text-xs font-normal text-gray-400">kg</span>
+                -${totalLost} <span class="text-xs font-normal text-gray-400">kg</span>
               </div>
             </div>
           </div>
 
           <!-- Progress Bar -->
           <div class="w-full bg-gray-800/80 rounded-full h-2 mb-3 overflow-hidden border border-white/5">
-            <div class="bg-gradient-to-r from-emerald-500 to-cyan-500 h-full rounded-full transition-all duration-500" style="width: ${stats.progressPct}%"></div>
+            <div class="bg-gradient-to-r from-emerald-500 to-cyan-500 h-full rounded-full transition-all duration-500" style="width: ${progressPct}%"></div>
           </div>
 
           <div class="grid grid-cols-2 gap-2 text-xs bg-black/30 rounded-xl p-2.5 mb-3 border border-white/5">
             <div>
               <span class="text-gray-400">最新体重:</span>
-              <span class="font-bold text-white font-mono-num ml-1">${stats.currentWeight}kg</span>
+              <span class="font-bold text-white font-mono-num ml-1">${currentWeight}kg</span>
             </div>
             <div class="text-right">
               <span class="text-gray-400">9/30目标:</span>
-              <span class="font-bold text-cyan-400 font-mono-num ml-1">${stats.targetWeight}kg</span>
+              <span class="font-bold text-cyan-400 font-mono-num ml-1">${targetWeight}kg</span>
             </div>
           </div>
 
@@ -144,14 +206,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="flex items-center space-x-1">
               <span>☀️ 早:</span>
               <span class="font-mono-num font-semibold ${hasMorning ? 'text-emerald-400' : 'text-gray-500'}">
-                ${hasMorning ? `${rec.morning.weight}kg` : '未上秤'}
+                ${morningWeight}${hasMorning ? 'kg' : ''}
               </span>
               ${rec.morning?.isRetroactive ? '<span class="text-[9px] text-amber-400 px-1 bg-amber-400/10 rounded">补</span>' : ''}
             </div>
             <div class="flex items-center space-x-1">
               <span>🌙 晚:</span>
               <span class="font-mono-num font-semibold ${hasEvening ? 'text-emerald-400' : 'text-gray-500'}">
-                ${hasEvening ? `${rec.evening.weight}kg` : '未上秤'}
+                ${eveningWeight}${hasEvening ? 'kg' : ''}
               </span>
               ${rec.evening?.isRetroactive ? '<span class="text-[9px] text-amber-400 px-1 bg-amber-400/10 rounded">补</span>' : ''}
             </div>
@@ -159,10 +221,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
           <!-- Action Buttons -->
           <div class="flex items-center space-x-2">
-            <button class="btn-checkin flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-black font-extrabold text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center space-x-1" data-user-id="${u.id}">
+            <button class="btn-checkin flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-black font-extrabold text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center space-x-1" data-user-id="${userId}">
               <span>🔥 我要打卡</span>
             </button>
-            <button class="btn-nudge px-3 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 text-gray-300 font-bold text-xs transition-all" data-user-id="${u.id}" title="复制群内催打卡令">
+            <button class="btn-nudge px-3 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 text-gray-300 font-bold text-xs transition-all" data-user-id="${userId}" title="复制群内催打卡令">
               <span>📢 催TA</span>
             </button>
           </div>
@@ -215,31 +277,33 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!user) return;
 
     checkinUserNameEl.textContent = `${user.name} · 体重打卡`;
-    const today = new Date().toISOString().split('T')[0];
-    checkinDateInput.value = today;
+    checkinDateInput.value = campaignDateKey();
     checkinNoteInput.value = '';
     isRetroCheckbox.checked = false;
 
     // Session selection
     setSessionType(getSuggestedSession());
 
-    // Init Scale Ruler
+    // Reveal before measuring the ruler; hidden modals report a zero-width viewport.
     const latest = storage.getLatestWeight(userId);
     const initialVal = latest ? latest.weight : (user.initialWeight || 80.0);
 
-    if (!scaleRuler) {
-      scaleRuler = new MechanicalScaleRuler({
-        containerId: 'scale-ruler-container',
-        displayId: 'scale-weight-display',
-        min: 45.0,
-        max: 140.0,
-        initialValue: initialVal
-      });
-    } else {
-      scaleRuler.setValue(initialVal, false);
-    }
-
     checkinModal.classList.remove('hidden');
+
+    requestAnimationFrame(() => {
+      if (!scaleRuler) {
+        scaleRuler = new MechanicalScaleRuler({
+          containerId: 'scale-ruler-container',
+          displayId: 'scale-weight-display',
+          min: 45.0,
+          max: 140.0,
+          initialValue: initialVal
+        });
+      } else {
+        scaleRuler.setValue(initialVal, false);
+        if (typeof scaleRuler.refreshLayout === 'function') scaleRuler.refreshLayout();
+      }
+    });
   }
 
   function setSessionType(session) {
@@ -265,28 +329,40 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Submit Check-in
-  submitCheckinBtn.addEventListener('click', () => {
+  submitCheckinBtn.addEventListener('click', async () => {
     if (!scaleRuler) return;
     const weight = scaleRuler.getValue();
     const dateStr = checkinDateInput.value;
     const note = checkinNoteInput.value;
     const isRetro = isRetroCheckbox.checked;
 
-    storage.saveCheckIn(dateStr, currentActiveUserId, currentActiveSession, weight, note, isRetro);
-    checkinModal.classList.add('hidden');
+    submitCheckinBtn.disabled = true;
+    submitCheckinBtn.classList.add('opacity-60', 'cursor-wait');
+    submitCheckinBtn.textContent = '⏳ 正在同步打卡…';
+    try {
+      await storage.saveCheckIn(dateStr, currentActiveUserId, currentActiveSession, weight, note, isRetro);
+      checkinModal.classList.add('hidden');
 
-    // Trigger Wolf Coach Diagnosis
-    const diagnosis = window.WolfCoachEngine.getDiagnosis(currentActiveUserId, currentActiveSession, weight, dateStr);
-    if (diagnosis) {
-      diagTitleEl.textContent = diagnosis.title;
-      diagBadgeEl.textContent = diagnosis.badge;
-      diagQuoteEl.textContent = diagnosis.quote;
-      diagnosisModal.classList.remove('hidden');
-    } else {
-      showToast('🎉 打卡成功！已同步至战况大盘');
+      // Trigger Wolf Coach Diagnosis only after the cloud write succeeds.
+      const diagnosis = window.WolfCoachEngine.getDiagnosis(currentActiveUserId, currentActiveSession, weight, dateStr);
+      if (diagnosis) {
+        diagTitleEl.textContent = diagnosis.title;
+        diagBadgeEl.textContent = diagnosis.badge;
+        diagQuoteEl.textContent = diagnosis.quote;
+        diagnosisModal.classList.remove('hidden');
+      } else {
+        showToast('🎉 打卡成功！已同步至战况大盘');
+      }
+
+      updateDashboard();
+    } catch (error) {
+      updateDashboard();
+      showToast(`❌ 打卡未同步：${error.message || '请检查网络后重试'}`, 5000);
+    } finally {
+      submitCheckinBtn.disabled = false;
+      submitCheckinBtn.classList.remove('opacity-60', 'cursor-wait');
+      submitCheckinBtn.textContent = '⚡ 确认提交打卡';
     }
-
-    updateDashboard();
   });
 
   closeCheckinBtn.addEventListener('click', () => checkinModal.classList.add('hidden'));
@@ -302,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   downloadPosterBtn.addEventListener('click', () => {
     const link = document.createElement('a');
-    link.download = `三人减重战报_${new Date().toISOString().split('T')[0]}.png`;
+    link.download = `三人减重战报_${localDateKey()}.png`;
     link.href = posterImageEl.src;
     link.click();
   });
@@ -323,15 +399,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     users.forEach(u => {
       const rec = storage.getRecord(dateStr, u.id) || {};
-      const mWeight = rec.morning ? `${rec.morning.weight}kg (${rec.morning.time})` : '未打卡';
-      const eWeight = rec.evening ? `${rec.evening.weight}kg (${rec.evening.time})` : '未打卡';
-      const note = rec.morning?.note || rec.evening?.note || '无备注';
+      const mWeight = rec.morning ? `${displayWeight(rec.morning.weight)}kg (${escapeHtml(rec.morning.time || '')})` : '未打卡';
+      const eWeight = rec.evening ? `${displayWeight(rec.evening.weight)}kg (${escapeHtml(rec.evening.time || '')})` : '未打卡';
+      const note = escapeHtml(rec.morning?.note || rec.evening?.note || '无备注');
 
       html += `
         <div class="bg-black/30 rounded-xl p-3 border border-white/5">
           <div class="flex items-center justify-between mb-1.5">
-            <span class="font-bold text-white">${u.name}</span>
-            <span class="text-xs text-gray-400">${u.role}</span>
+            <span class="font-bold text-white">${escapeHtml(u.name)}</span>
+            <span class="text-xs text-gray-400">${escapeHtml(u.role)}</span>
           </div>
           <div class="grid grid-cols-2 gap-2 text-xs font-mono-num mb-1 text-gray-300">
             <div>☀️ 早: <span class="${rec.morning ? 'text-emerald-400 font-bold' : 'text-gray-500'}">${mWeight}</span></div>
@@ -365,17 +441,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let html = '';
     penalties.forEach(p => {
+      const penaltyId = escapeHtml(p.id);
       html += `
         <div class="flex items-center justify-between bg-black/30 rounded-xl p-3 border border-white/5 text-xs">
           <div>
             <div class="flex items-center space-x-2">
-              <span class="font-bold text-rose-400">${p.userName}</span>
-              <span class="text-gray-400">${p.date}</span>
-              <span class="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-300 text-[10px]">${p.reason}</span>
+              <span class="font-bold text-rose-400">${escapeHtml(p.userName)}</span>
+              <span class="text-gray-400">${escapeHtml(p.date)}</span>
+              <span class="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-300 text-[10px]">${escapeHtml(p.reason)}</span>
             </div>
-            <div class="text-gray-300 mt-1">惩罚：罚 ${p.count} 个${p.type}</div>
+            <div class="text-gray-300 mt-1">惩罚：罚 ${escapeHtml(p.count)} 个${escapeHtml(p.type)}</div>
           </div>
-          <button class="btn-toggle-penalty px-2.5 py-1 rounded-lg text-[11px] font-bold ${p.settled ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}" data-pen-id="${p.id}">
+          <button class="btn-toggle-penalty px-2.5 py-1 rounded-lg text-[11px] font-bold ${p.settled ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}" data-pen-id="${penaltyId}">
             ${p.settled ? '✅ 已执行' : '⏳ 待执行'}
           </button>
         </div>
@@ -384,10 +461,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     container.innerHTML = html;
     container.querySelectorAll('.btn-toggle-penalty').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-pen-id');
-        storage.togglePenaltySettled(id);
-        renderPenaltyLedger();
+        btn.disabled = true;
+        try {
+          await storage.togglePenaltySettled(id);
+          renderPenaltyLedger();
+          updateSyncStatus();
+        } catch (error) {
+          btn.disabled = false;
+          updateDashboard();
+          showToast(`❌ 惩罚状态未同步：${error.message || '请检查网络后重试'}`, 5000);
+        }
       });
     });
   }
@@ -412,11 +497,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="flex items-center justify-between py-2 border-b border-white/5 text-xs last:border-0">
           <div class="flex items-center space-x-2">
             <span class="text-base">${medals[idx]}</span>
-            <span class="font-bold text-white">${item.user.name}</span>
+            <span class="font-bold text-white">${escapeHtml(item.user.name)}</span>
           </div>
           <div class="flex items-center space-x-3">
-            <span class="text-gray-400">已减: <strong class="text-emerald-400 font-mono-num font-bold">-${item.stats.totalLost.toFixed(1)}kg</strong></span>
-            <span class="text-gray-500 text-[11px]">进度: ${item.stats.progressPct}%</span>
+            <span class="text-gray-400">已减: <strong class="text-emerald-400 font-mono-num font-bold">-${escapeHtml(displayWeight(item.stats.totalLost))}kg</strong></span>
+            <span class="text-gray-500 text-[11px]">进度: ${escapeHtml(item.stats.progressPct)}%</span>
           </div>
         </div>
       `;
@@ -445,22 +530,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (saveSettingsBtn) {
-    saveSettingsBtn.addEventListener('click', () => {
-      storage.updateUserProfile('liugang', {
-        initialWeight: document.getElementById('set-lg-init').value,
-        targetWeight: document.getElementById('set-lg-tgt').value
-      });
-      storage.updateUserProfile('zhangtinglei', {
-        initialWeight: document.getElementById('set-ztl-init').value,
-        targetWeight: document.getElementById('set-ztl-tgt').value
-      });
-      storage.updateUserProfile('luxuan', {
-        initialWeight: document.getElementById('set-lx-init').value,
-        targetWeight: document.getElementById('set-lx-tgt').value
-      });
-      settingsModal.classList.add('hidden');
-      showToast('✅ 初始体重与目标已锁定！');
-      updateDashboard();
+    saveSettingsBtn.addEventListener('click', async () => {
+      saveSettingsBtn.disabled = true;
+      saveSettingsBtn.classList.add('opacity-60', 'cursor-wait');
+      saveSettingsBtn.textContent = '⏳ 正在同步基准…';
+      try {
+        await storage.updateUserProfile('liugang', {
+          initialWeight: document.getElementById('set-lg-init').value,
+          targetWeight: document.getElementById('set-lg-tgt').value
+        });
+        await storage.updateUserProfile('zhangtinglei', {
+          initialWeight: document.getElementById('set-ztl-init').value,
+          targetWeight: document.getElementById('set-ztl-tgt').value
+        });
+        await storage.updateUserProfile('luxuan', {
+          initialWeight: document.getElementById('set-lx-init').value,
+          targetWeight: document.getElementById('set-lx-tgt').value
+        });
+        settingsModal.classList.add('hidden');
+        showToast('✅ 初始体重与目标已同步锁定！');
+        updateDashboard();
+      } catch (error) {
+        updateDashboard();
+        showToast(`❌ 基准未完全同步：${error.message || '请检查网络后重试'}`, 5000);
+      } finally {
+        saveSettingsBtn.disabled = false;
+        saveSettingsBtn.classList.remove('opacity-60', 'cursor-wait');
+        saveSettingsBtn.textContent = '💾 保存并锁定基准';
+      }
     });
   }
 
@@ -469,4 +566,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Initial Setup ---
   charts.initPKChart('pk-chart-canvas');
   updateDashboard();
+
+  let refreshPromise = null;
+  async function refreshDashboard(showFailureToast = false) {
+    if (refreshPromise) return refreshPromise;
+    refreshPromise = (async () => {
+      updateSyncStatus();
+      try {
+        await storage.refresh();
+        updateDashboard();
+      } catch (error) {
+        updateDashboard();
+        if (showFailureToast) {
+          showToast(`⚠️ 云端读取失败，已使用本地缓存：${error.message || '请稍后重试'}`, 5000);
+        }
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+    return refreshPromise;
+  }
+
+  // Keep the cache-rendered dashboard usable while the first cloud read is in flight.
+  refreshDashboard(true);
+  window.setInterval(() => refreshDashboard(false), 60 * 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshDashboard(false);
+  });
+  window.addEventListener('online', () => refreshDashboard(false));
 });

@@ -9,7 +9,7 @@
 ## 📖 项目简介
 
 专为 **刘钢、张庭磊、卢轩** 三人打造的 2026 秋季（8月24日 — 9月30日，共 38 天）减重决战打卡系统。  
-告别传统表格的枯燥数字输入，以**手机端优先的暗黑燃脂风 Web App**呈现，开源公开托管于 GitHub，微信群点击链接即可秒级查看大盘与上秤打卡。
+告别传统表格的枯燥数字输入，以**手机端优先的暗黑燃脂风 Web App**呈现，开源公开托管于 GitHub，微信群点击链接即可秒级查看大盘与上秤打卡。三台手机读取和写入同一个 Supabase 数据库，`localStorage` 仅作为断网时的只读缓存。
 
 ---
 
@@ -40,6 +40,17 @@
 
 ---
 
+## ☁️ 共享数据库
+
+- 数据库存放在 Supabase 项目中，三位成员无需登录即可共同读取、打卡和修改目标。
+- 前端连接配置位于 `js/config.js`，其中只包含可公开发布的 project URL 和 publishable key，适合随 GitHub Pages 一起部署。
+- 数据库结构、约束、RLS 与公开读写策略记录在 `supabase/migrations/`，可随代码审查和恢复。
+- 浏览器不得使用 `sb_secret_...` 或 `service_role` 密钥；这类密钥拥有后台权限，绝不能提交到 GitHub。
+
+当前模式是“知道网址即可使用”：不做登录注册，也不弹隐私授权。数据库拒绝网页访客删除记录，但允许所有访客读取、打卡、修改已有记录和结算惩罚。因此请只把网站链接发给三位参与者。
+
+---
+
 ## 🌐 部署到 GitHub Pages（完全公开免登录）
 
 1. 在你的 GitHub 账号（`insistgang`）下新建一个公开仓库：`weight-tracker`
@@ -54,8 +65,9 @@
    git push -u origin main
    ```
 3. 进入 GitHub 仓库设置：`Settings` $\rightarrow$ `Pages` $\rightarrow$ Source 选择 `Deploy from a branch` (Branch: `main` / `root`) $\rightarrow$ 保存。
-4. 稍等 1~2 分钟，即可获得公开访问链接：  
-   👉 **`https://insistgang.github.io/weight-tracker/`**
+4. 稍等 1~2 分钟，即可通过自定义域名访问：
+   👉 **`https://insistgang.top/weight-tracker/`**
+   GitHub Pages 默认地址 `https://insistgang.github.io/weight-tracker/` 会自动跳转到该域名。
 
 ---
 
@@ -68,11 +80,14 @@
 ├── README.md          # 项目介绍与部署说明
 ├── css/
 │   └── style.css      # 拟真机械刻度盘与暗黑动效样式
+├── supabase/
+│   └── migrations/    # 共享数据库结构、RLS 与权限策略
 └── js/
+    ├── config.js      # Supabase URL 与公开 publishable key
     ├── app.js         # 主状态管理与交互逻辑
     ├── scale.js       # 拟真刻度盘手势交互引擎
     ├── coach.js       # 狼性教练智能诊断引擎
     ├── charts.js      # 三人 PK 折线图与热力图引擎
     ├── poster.js      # Canvas 9:16 战报长图生成器
-    └── storage.js     # 数据持久化存储层
+    └── storage.js     # Supabase 共享存储与本地缓存层
 ```

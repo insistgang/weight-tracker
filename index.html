@@ -59,6 +59,7 @@
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">决战版</span>
           </h1>
           <p class="text-[11px] text-gray-400 font-medium">8.24 — 9.30 · 38天三人铁血打卡</p>
+          <span id="sync-status" class="inline-flex mt-1 text-[10px] text-gray-500" role="status" aria-live="polite">正在读取本地缓存…</span>
         </div>
       </div>
 
@@ -217,7 +218,7 @@
 
       <div class="flex items-center justify-between px-1 text-xs">
         <span class="text-gray-400">打卡日期：</span>
-        <input type="date" id="checkin-date" class="bg-black/40 border border-white/10 rounded-lg px-2.5 py-1 text-white font-mono-num text-xs focus:outline-none focus:border-emerald-500">
+        <input type="date" id="checkin-date" min="2026-08-24" max="2026-09-30" class="bg-black/40 border border-white/10 rounded-lg px-2.5 py-1 text-white font-mono-num text-xs focus:outline-none focus:border-emerald-500">
       </div>
 
       <!-- Mechanical Scale Ruler Section -->
@@ -246,7 +247,7 @@
       <!-- One-line Note -->
       <div>
         <label class="block text-xs text-gray-400 mb-1">今日碎碎念 / 饮食状态（选填）</label>
-        <input type="text" id="checkin-note" placeholder="例如：吃得干净、大汗淋漓5公里、排便顺畅..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500">
+        <input type="text" id="checkin-note" maxlength="200" placeholder="例如：吃得干净、大汗淋漓5公里、排便顺畅..." class="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500">
       </div>
 
       <!-- Retroactive Checkbox -->
@@ -321,8 +322,8 @@
         <div class="bg-black/30 p-3 rounded-xl border border-white/5">
           <span class="font-bold text-emerald-400 block mb-1">刘钢</span>
           <div class="grid grid-cols-2 gap-2">
-            <div>初始 (kg): <input type="number" id="set-lg-init" step="0.1" class="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-white font-mono-num"></div>
-            <div>目标 (kg): <input type="number" id="set-lg-tgt" step="0.1" class="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-cyan-400 font-mono-num"></div>
+            <div>初始 (kg): <input type="number" id="set-lg-init" min="45" max="140" step="0.1" class="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-white font-mono-num"></div>
+            <div>目标 (kg): <input type="number" id="set-lg-tgt" min="45" max="140" step="0.1" class="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-cyan-400 font-mono-num"></div>
           </div>
         </div>
 
@@ -330,8 +331,8 @@
         <div class="bg-black/30 p-3 rounded-xl border border-white/5">
           <span class="font-bold text-cyan-400 block mb-1">张庭磊</span>
           <div class="grid grid-cols-2 gap-2">
-            <div>初始 (kg): <input type="number" id="set-ztl-init" step="0.1" class="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-white font-mono-num"></div>
-            <div>目标 (kg): <input type="number" id="set-ztl-tgt" step="0.1" class="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-cyan-400 font-mono-num"></div>
+            <div>初始 (kg): <input type="number" id="set-ztl-init" min="45" max="140" step="0.1" class="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-white font-mono-num"></div>
+            <div>目标 (kg): <input type="number" id="set-ztl-tgt" min="45" max="140" step="0.1" class="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-cyan-400 font-mono-num"></div>
           </div>
         </div>
 
@@ -339,8 +340,8 @@
         <div class="bg-black/30 p-3 rounded-xl border border-white/5">
           <span class="font-bold text-amber-400 block mb-1">卢轩</span>
           <div class="grid grid-cols-2 gap-2">
-            <div>初始 (kg): <input type="number" id="set-lx-init" step="0.1" class="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-white font-mono-num"></div>
-            <div>目标 (kg): <input type="number" id="set-lx-tgt" step="0.1" class="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-cyan-400 font-mono-num"></div>
+            <div>初始 (kg): <input type="number" id="set-lx-init" min="45" max="140" step="0.1" class="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-white font-mono-num"></div>
+            <div>目标 (kg): <input type="number" id="set-lx-tgt" min="45" max="140" step="0.1" class="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-cyan-400 font-mono-num"></div>
           </div>
         </div>
       </div>
@@ -352,6 +353,7 @@
   </div>
 
   <!-- Application Logic Scripts -->
+  <script src="js/config.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/scale.js"></script>
   <script src="js/coach.js"></script>
