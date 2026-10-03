@@ -30,7 +30,7 @@
 
 1. 打开终端进入项目目录：
    ```bash
-   cd /Users/insistgang/Desktop/weight-tracker
+   cd /Users/insistgang/Desktop/个人工具/weight-tracker
    ```
 2. 启动本地静态服务器：
    ```bash
@@ -56,7 +56,7 @@
 1. 在你的 GitHub 账号（`insistgang`）下新建一个公开仓库：`weight-tracker`
 2. 在项目根目录执行推送命令：
    ```bash
-   cd /Users/insistgang/Desktop/weight-tracker
+   cd /Users/insistgang/Desktop/个人工具/weight-tracker
    git init
    git add .
    git commit -m "feat: initial commit of 2026 WeightTracker"
@@ -74,7 +74,7 @@
 ## 📂 文件目录结构
 
 ```text
-/Users/insistgang/Desktop/weight-tracker/
+/Users/insistgang/Desktop/个人工具/weight-tracker/
 ├── index.html         # 核心单页应用（PWA 响应式布局）
 ├── PRD.md             # 产品需求文档
 ├── README.md          # 项目介绍与部署说明
